@@ -108,8 +108,8 @@ var PostController = {
       while (1) {
         switch (_context3.prev = _context3.next) {
           case 0:
-            userId = req.params.userId;
-            _context3.prev = 1;
+            _context3.prev = 0;
+            userId = req.user._id;
             _context3.next = 4;
             return regeneratorRuntime.awrap(_Post["default"].find({
               author: userId
@@ -125,13 +125,15 @@ var PostController = {
 
           case 4:
             posts = _context3.sent;
-            res.json(posts);
+            res.json({
+              posts: posts
+            });
             _context3.next = 11;
             break;
 
           case 8:
             _context3.prev = 8;
-            _context3.t0 = _context3["catch"](1);
+            _context3.t0 = _context3["catch"](0);
             res.status(500).json({
               error: 'Lỗi khi lấy posts của user'
             });
@@ -141,10 +143,10 @@ var PostController = {
             return _context3.stop();
         }
       }
-    }, null, null, [[1, 8]]);
+    }, null, null, [[0, 8]]);
   },
   createComment: function createComment(req, res) {
-    var _req$body2, postId, text, comment, post;
+    var _req$body2, postId, text, comment, post, populatedComment;
 
     return regeneratorRuntime.async(function createComment$(_context4) {
       while (1) {
@@ -182,26 +184,200 @@ var PostController = {
             return regeneratorRuntime.awrap(post.save());
 
           case 13:
+            _context4.next = 15;
+            return regeneratorRuntime.awrap(_Comment["default"].findById(comment._id).populate("author", "username avatar"));
+
+          case 15:
+            populatedComment = _context4.sent;
             res.status(201).json({
               message: 'Tạo comment thành công',
-              comment: comment
+              comment: populatedComment
             });
-            _context4.next = 19;
+            _context4.next = 23;
             break;
 
-          case 16:
-            _context4.prev = 16;
+          case 19:
+            _context4.prev = 19;
             _context4.t0 = _context4["catch"](3);
+            console.error(_context4.t0);
             res.status(500).json({
               error: 'Lỗi khi tạo comment'
             });
 
-          case 19:
+          case 23:
           case "end":
             return _context4.stop();
         }
       }
-    }, null, null, [[3, 16]]);
+    }, null, null, [[3, 19]]);
+  },
+  getComments: function getComments(req, res) {
+    var postId, comments;
+    return regeneratorRuntime.async(function getComments$(_context5) {
+      while (1) {
+        switch (_context5.prev = _context5.next) {
+          case 0:
+            postId = req.params.postId;
+            _context5.prev = 1;
+            _context5.next = 4;
+            return regeneratorRuntime.awrap(_Comment["default"].find({
+              post: postId
+            }).populate('author', ['username', 'avatar']));
+
+          case 4:
+            comments = _context5.sent;
+            res.status(200).json(comments);
+            _context5.next = 12;
+            break;
+
+          case 8:
+            _context5.prev = 8;
+            _context5.t0 = _context5["catch"](1);
+            console.error("Lỗi khi lấy bình luận:", _context5.t0);
+            res.status(500).json({
+              message: "Lỗi khi lấy bình luận"
+            });
+
+          case 12:
+          case "end":
+            return _context5.stop();
+        }
+      }
+    }, null, null, [[1, 8]]);
+  },
+  DeleteComment: function DeleteComment(req, res) {
+    var commentId, comment;
+    return regeneratorRuntime.async(function DeleteComment$(_context6) {
+      while (1) {
+        switch (_context6.prev = _context6.next) {
+          case 0:
+            commentId = req.params.commentId;
+            _context6.prev = 1;
+            _context6.next = 4;
+            return regeneratorRuntime.awrap(_Comment["default"].findById(commentId));
+
+          case 4:
+            comment = _context6.sent;
+
+            if (comment) {
+              _context6.next = 7;
+              break;
+            }
+
+            return _context6.abrupt("return", res.status(404).json({
+              message: "Không tìm thấy bình luận"
+            }));
+
+          case 7:
+            if (!(comment.author.toString() !== req.user._id.toString())) {
+              _context6.next = 9;
+              break;
+            }
+
+            return _context6.abrupt("return", res.status(403).json({
+              message: "Bạn không có quyền xóa bình luận này"
+            }));
+
+          case 9:
+            _context6.next = 11;
+            return regeneratorRuntime.awrap(_Post["default"].findByIdAndUpdate(comment.post, {
+              $pull: {
+                comments: comment._id
+              }
+            }));
+
+          case 11:
+            _context6.next = 13;
+            return regeneratorRuntime.awrap(_Comment["default"].findByIdAndDelete(commentId));
+
+          case 13:
+            res.status(200).json({
+              message: "Xóa bình luận thành công"
+            });
+            _context6.next = 20;
+            break;
+
+          case 16:
+            _context6.prev = 16;
+            _context6.t0 = _context6["catch"](1);
+            console.error("Lỗi khi xoá bình luận:", _context6.t0);
+            res.status(500).json({
+              message: "Lỗi server khi xoá bình luận"
+            });
+
+          case 20:
+          case "end":
+            return _context6.stop();
+        }
+      }
+    }, null, null, [[1, 16]]);
+  },
+  DeletePost: function DeletePost(req, res) {
+    var postId, post;
+    return regeneratorRuntime.async(function DeletePost$(_context7) {
+      while (1) {
+        switch (_context7.prev = _context7.next) {
+          case 0:
+            postId = req.params.postId;
+            _context7.prev = 1;
+            _context7.next = 4;
+            return regeneratorRuntime.awrap(_Post["default"].findById(postId));
+
+          case 4:
+            post = _context7.sent;
+
+            if (post) {
+              _context7.next = 7;
+              break;
+            }
+
+            return _context7.abrupt("return", res.status(404).json({
+              message: "Không tìm thấy bài post"
+            }));
+
+          case 7:
+            if (!(post.author.toString() !== req.user._id.toString())) {
+              _context7.next = 9;
+              break;
+            }
+
+            return _context7.abrupt("return", res.status(403).json({
+              message: "Bạn không có quyền xóa bài viết này"
+            }));
+
+          case 9:
+            _context7.next = 11;
+            return regeneratorRuntime.awrap(_Comment["default"].deleteMany({
+              _id: {
+                $in: post.comments
+              }
+            }));
+
+          case 11:
+            _context7.next = 13;
+            return regeneratorRuntime.awrap(_Post["default"].findByIdAndDelete(postId));
+
+          case 13:
+            res.status(200).json({
+              message: "Xóa bài viết thành công"
+            });
+            _context7.next = 20;
+            break;
+
+          case 16:
+            _context7.prev = 16;
+            _context7.t0 = _context7["catch"](1);
+            console.error("Lỗi khi xoá bài viết:", _context7.t0);
+            res.status(500).json({
+              message: "Lỗi server khi xoá bài viết"
+            });
+
+          case 20:
+          case "end":
+            return _context7.stop();
+        }
+      }
+    }, null, null, [[1, 16]]);
   }
 };
 var _default = PostController;

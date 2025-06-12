@@ -1,4 +1,6 @@
 import User from "../Model/User.js";
+import Post from "../Model/Post.js"
+import Comment from "../Model/Comment.js";
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid';
 import {randomBytes} from 'crypto'
@@ -110,37 +112,62 @@ const usersController = {
         res.status(500).json({ error: "Lỗi khi lấy thông tin user" });
       }
     },
-    UpdateUser: async (req,res) =>{
-        const {username,avatar,bio,age,gender} = req.body
-        const userId = req.params.userId
-        if(!username) {
-            res.status(400).json({
-                message: "username không được để trống"
-            })
-        }
-        try {
-        const user = await User.findById(userId);
-        if (!user) {
-        return res.status(404).json({ message: "User không tồn tại" });
-        }
+    UpdateUser: async (req, res) => {
+      const { username, avatar, bio, age, gender } = req.body;
+      const user = req.user;
+    
+      if (!username) {
+        return res.status(400).json({ message: "username không được để trống" });
+      }
+    
+      try {
         user.username = username;
-        if(age) user.age = age;
-        if(gender) user.gender = gender;
+        if (age !== undefined) user.age = age;
+        if (gender) user.gender = gender;
         if (avatar) user.avatar = avatar;
         if (bio) user.bio = bio;
+    
         await user.save();
+    
         res.status(200).json({
-            message: 'Cập nhật user thành công',
-            user: {
-              id: user._id,
-              username: user.username,
-            }
-          });
-        }catch(error){
-            console.error(error);
-            res.status(500).json({ error: 'Lỗi hệ thống' });
-
+          message: 'Cập nhật user thành công',
+          user: {
+            id: user._id,
+            username: user.username,
+            age: user.age,
+            gender: user.gender,
+            avatar: user.avatar,
+            bio: user.bio
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Lỗi hệ thống' });
+      }
+    },
+    GetUserInfor: async(req,res) =>{
+      try {
+        const { userId } = req.params;
+        const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({ error: 'Không tìm thấy người dùng' });
         }
+        const posts = await Post.find({ author: userId })
+          .populate('author', 'name email')
+          .populate({
+              path: 'comments',
+              populate: { path: 'author', select: 'username avatar' }
+            })
+          .lean();
+        return res.status(200).json({
+          success: true,
+          user,
+          posts
+        });
+      } catch (err) {
+        console.error('Lỗi GetUserInfor:', err);
+        return res.status(500).json({ error: 'Lỗi server' });
+      }
     }
 }
 export default usersController

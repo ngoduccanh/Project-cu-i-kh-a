@@ -21,6 +21,12 @@ const postSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Comment' 
   }],
+  Day:[{
+    type: String
+  }],
+  location:[{
+    type: String
+  }]
 }, { timestamps: true });
 
 const Post = mongoose.model('Post', postSchema);

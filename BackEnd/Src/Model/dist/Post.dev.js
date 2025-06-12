@@ -29,6 +29,12 @@ var postSchema = new _mongoose["default"].Schema({
   comments: [{
     type: _mongoose["default"].Schema.Types.ObjectId,
     ref: 'Comment'
+  }],
+  Day: [{
+    type: String
+  }],
+  location: [{
+    type: String
   }]
 }, {
   timestamps: true

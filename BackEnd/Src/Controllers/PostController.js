@@ -34,39 +34,98 @@ import Comment from "../Model/Comment.js"
           res.status(500).json({ error: 'Lỗi khi lấy posts' });
         }
       },
-    getUserPosts: async (req, res) => {
-        const userId = req.params.userId;
+      getUserPosts: async (req, res) => {
         try {
-              const posts = await Post.find({ author: userId })
+          const userId = req.user._id;  
+          const posts = await Post.find({ author: userId })
             .populate('author', 'username avatar')
             .populate({
-                path: 'comments',
-                populate: { path: 'author', select: 'username avatar' }
+              path: 'comments',
+              populate: { path: 'author', select: 'username avatar' }
             })
             .sort({ createdAt: -1 });
-            res.json(posts);
+          res.json({ posts }); 
         } catch (err) {
-            res.status(500).json({ error: 'Lỗi khi lấy posts của user' });
+          res.status(500).json({ error: 'Lỗi khi lấy posts của user' });
         }
-        },
-    createComment : async (req, res) => {
-            const { postId, text } = req.body;
-            if (!text) return res.status(400).json({ error: 'Text bắt buộc' });
+      },
+      createComment: async (req, res) => {
+        const { postId, text } = req.body;
+        if (!text) return res.status(400).json({ error: 'Text bắt buộc' });
+      
+        try {
+          const comment = new Comment({
+            post: postId,
+            author: req.user._id,
+            text
+          });
+          await comment.save();
+      
+          const post = await Post.findById(postId);
+          post.comments.push(comment._id);
+          await post.save();
+          const populatedComment = await Comment.findById(comment._id)
+            .populate("author", "username avatar");
+      
+          res.status(201).json({
+            message: 'Tạo comment thành công',
+            comment: populatedComment
+          });
+        } catch (err) {
+          console.error(err);
+          res.status(500).json({ error: 'Lỗi khi tạo comment' });
+        }
+      },
+          getComments: async (req, res) => {
+            const postId = req.params.postId;
             try {
-              const comment = new Comment({
-                post: postId,
-                author: req.user._id,
-                text
-              });
-              await comment.save();
-              const post = await Post.findById(postId);
-              post.comments.push(comment._id);
-              await post.save();
-              res.status(201).json({ message: 'Tạo comment thành công', comment });
-            } catch (err) {
-              res.status(500).json({ error: 'Lỗi khi tạo comment' });
+              const comments = await Comment.find({ post: postId })
+              .populate('author', ['username', 'avatar'])
+              res.status(200).json(comments);
+            } catch (error) {
+              console.error("Lỗi khi lấy bình luận:", error);
+              res.status(500).json({ message: "Lỗi khi lấy bình luận" });
             }
           },
-    
- }
+          DeleteComment: async (req, res) => {
+            const commentId = req.params.commentId;
+          
+            try {
+              const comment = await Comment.findById(commentId);
+              if (!comment) return res.status(404).json({ message: "Không tìm thấy bình luận" });
+              if (comment.author.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "Bạn không có quyền xóa bình luận này" });
+              }
+              await Post.findByIdAndUpdate(comment.post, {
+                $pull: { comments: comment._id }
+              });
+              await Comment.findByIdAndDelete(commentId);
+          
+              res.status(200).json({ message: "Xóa bình luận thành công" });
+            } catch (error) {
+              console.error("Lỗi khi xoá bình luận:", error);
+              res.status(500).json({ message: "Lỗi server khi xoá bình luận" });
+            }
+          },
+          DeletePost: async (req, res) => {
+            const postId = req.params.postId;
+            try {
+              const post = await Post.findById(postId);
+              if (!post) {
+                return res.status(404).json({ message: "Không tìm thấy bài post" });
+              }
+          
+              if (post.author.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "Bạn không có quyền xóa bài viết này" });
+              }
+              await Comment.deleteMany({ _id: { $in: post.comments } });
+              await Post.findByIdAndDelete(postId);
+          
+              res.status(200).json({ message: "Xóa bài viết thành công" });
+            } catch (error) {
+              console.error("Lỗi khi xoá bài viết:", error);
+              res.status(500).json({ message: "Lỗi server khi xoá bài viết" });
+            }
+          }          
+        }
  export default PostController

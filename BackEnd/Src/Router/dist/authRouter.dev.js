@@ -20,6 +20,7 @@ authRouter.post('/register', _UserController["default"].register);
 authRouter.post('/login', _UserController["default"].login);
 authRouter.post('/CreatUser', _CheckUser["default"], _UserController["default"].CreatUser);
 authRouter.get('/UserInfor', _CheckUser["default"], _UserController["default"].UserInfor);
-authRouter.put('/UpdateUser/:userId', _CheckUser["default"], _UserController["default"].UpdateUser);
+authRouter.put('/UpdateUser', _CheckUser["default"], _UserController["default"].UpdateUser);
 authRouter.get('/getAllUser', _UserController["default"].getAllUsers);
+authRouter.get('/user/:userId', _UserController["default"].GetUserInfor);
 //# sourceMappingURL=authRouter.dev.js.map
