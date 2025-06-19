@@ -155,9 +155,9 @@ const usersController = {
         const posts = await Post.find({ author: userId })
           .populate('author', 'name email')
           .populate({
-              path: 'comments',
-              populate: { path: 'author', select: 'username avatar' }
-            })
+            path: 'comments',
+            populate: { path: 'author', select: 'username avatar' }
+          })
           .lean();
         return res.status(200).json({
           success: true,

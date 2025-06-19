@@ -1,5 +1,6 @@
 import Post from "../Model/Post.js"
 import Comment from "../Model/Comment.js"
+import Shape from "../Model/Shape.js";
  const PostController = {
      createPost: async (req, res) => {
         const { image, caption } = req.body;
@@ -47,6 +48,23 @@ import Comment from "../Model/Comment.js"
           res.json({ posts }); 
         } catch (err) {
           res.status(500).json({ error: 'Lỗi khi lấy posts của user' });
+        }
+      },
+      getPostsByUserId: async (req, res) => {
+        try {
+          const { userId } = req.params;
+          const posts = await Post.find({ author: userId })
+            .populate('author', 'username avatar')
+            .populate({
+              path: 'comments',
+              populate: { path: 'author', select: 'username avatar' }
+            })
+            .sort({ createdAt: -1 });
+
+          res.json({ posts });
+        } catch (err) {
+          console.error("Lỗi khi lấy post của userId:", err);
+          res.status(500).json({ error: 'Lỗi khi lấy bài viết của người dùng' });
         }
       },
       createComment: async (req, res) => {
@@ -126,6 +144,52 @@ import Comment from "../Model/Comment.js"
               console.error("Lỗi khi xoá bài viết:", error);
               res.status(500).json({ message: "Lỗi server khi xoá bài viết" });
             }
-          }          
+          },
+          SavedPost: async(req,res) =>{
+            const { postId } = req.body;
+            const userId = req.user._id;
+            try {
+              const existing = await Shape.findOne({ user: userId, post: postId });
+              if (existing) return res.status(400).json({ message: "Đã lưu trước đó" });
+
+              const saved = new Shape({ user: userId, post: postId });
+              await saved.save();
+              res.status(201).json({ message: "Đã shape bài viết" });
+            } catch (err) {
+              res.status(500).json({ message: "Lỗi server", error: err.message });
+            }
+          },
+          GetSavedPost: async(req,res) =>{
+            try {
+              const userId = req.user._id;
+               const saved = await Shape.find({ user: userId })
+                .populate({
+                  path: "post",
+                  populate: {
+                    path: "author",
+                    select: "username avatar", 
+                  },
+                });
+              res.json(saved);
+            } catch (err) {
+              res.status(500).json({ message: "Lỗi khi lấy danh sách", error: err.message });
+            }
+          },
+          deleteSavedPost: async(req,res)=>{
+            const { postId } = req.params;
+            const userId = req.user._id;
+            try {
+              const saved = await Shape.findOne({ user: userId, post: postId });
+
+              if (!saved) {
+                return res.status(404).json({ message: 'Bài viết chưa được lưu hoặc đã bị xóa' });
+              }
+              await Shape.deleteOne({ _id: saved._id });
+              res.status(200).json({ message: 'Đã xóa bài viết đã lưu' });
+            } catch (error) {
+              console.error('Lỗi khi xóa bài viết đã lưu:', error);
+              res.status(500).json({ message: 'Lỗi máy chủ' });
+            }
+          }
         }
  export default PostController
